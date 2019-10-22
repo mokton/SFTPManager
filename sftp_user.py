@@ -11,9 +11,11 @@ from random import choice
 import fileinput
 
 
-_chars_set = r'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&<>-_.,='
 _here = os.path.dirname(__file__)
-_passwd = os.path.join(_here, 'passwd')
+_chrootDirectory = '/mnt/nas'                # Sftp Chroot Directory
+_password = os.path.join(_here, 'password')  # password file path
+_sftp_group = 'nas'
+_chars_set = r'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&<>-_.,='
 
 
 def random_string(length=20):
@@ -47,7 +49,7 @@ def get_args():
                         help="User's  password.", default='')
 
     parser.add_argument('-R', '--root', type=str, dest='Chroot_dir',
-                        help="chroot dectionary", default='/mnt/nas')
+                        help="chroot dectionary", default=_chrootDirectory)
 
     # 解析参数步骤  
     args = parser.parse_args()
@@ -71,7 +73,7 @@ def check_user(user):
 
 
 def sftpPasswd(action, username, password=None, department=None, passwd_file=None):
-    filename = passwd_file if passwd_file else _passwd
+    filename = passwd_file if passwd_file else _password
 
     if action == 'add':
         with open(filename, 'a', encoding='utf-8') as fp:
@@ -112,7 +114,7 @@ def sftpUser(user: dict):
 
         if os.path.exists(user_root):
             shutil.rmtree(user_root)
-        os.system('useradd -d {user_root} -s /usr/sbin/nologin -g nas -p {password} -m {user}'.format(user_root=user_root, password=user_password, user=user_username))
+        os.system('useradd -d {user_root} -s /usr/sbin/nologin -g {group} -p {password} -m {user}'.format(user_root=user_root, password=user_password, user=user_username, group=_sftp_group))
         user_pw = pwd.getpwnam(user_username)
         os.chown(user_root, user_pw.pw_uid, user_pw.pw_gid)
         os.chmod(user_root, mode=0o751)
@@ -145,7 +147,7 @@ def sftpUser(user: dict):
 
 
 def test_sftpPasswd():
-    os.remove(_passwd)
+    os.remove(_password)
     for i in range(10):
         sftpPasswd('add', 'user' + str(i), random_string(), department='development')
     sftpPasswd('password', 'user5', random_string())
